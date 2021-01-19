@@ -42,4 +42,4 @@ FE-B7-18-E6-5F-FE | 192.168.1.108   | Ubuntu-Laptop     | 1,682 MB
 Total: 8,917 MB
 ```
 
-If an output file path is specified, the script will silently generate a JSON file containing more complete data, with throughput in units of bytes transferred. If no host address, username, or password is specified, the default values for the router will be used (i.e. `192.168.1.1`, `admin`/`admin`).
+If an output file path is specified, the script will silently generate a JSON file containing more complete data, with throughput in units of bytes transferred. If no host address, username, or password is specified, the default values for the router will be used (i.e. `192.168.0.1`, `admin`/`admin`).
