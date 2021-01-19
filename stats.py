@@ -6,7 +6,7 @@ import collections
 import json
 import requests
 
-def parse_request(request, data):
+def parse_statistics(request, data):
     # Quick and dirty string parser that processes the HTML response to obtain: 
     # 1. The raw statistics data on this page, and 
     # 2. The number of pages the total set of data is spread across.
@@ -40,10 +40,34 @@ def parse_request(request, data):
             break
     return num_pages
 
-def fetch_data(address, username, password, data):
+def parse_dhcp_list(request, hostnames, ip_addresses):
+    parser_state = None
+    for line in request.iter_lines():
+        line = line.decode('utf-8')
+        if parser_state == None:
+            if line.startswith('var DHCPDynList = new Array('):
+                # Reached beginning of DHCPDynList data
+                parser_state = 'parsing DHCPDynList'
+                continue
+        elif parser_state == 'parsing DHCPDynList':
+            if line.endswith(');'):
+                # Reached end of DHCPDynList data. Done.
+                break
+            fields = line.split(', ')
+            hostname = fields[0].replace('"', '')
+            hw_address = fields[1].replace('"', '')
+            ip_address = fields[2].replace('"', '')
+            hostnames[hw_address] = hostname
+            ip_addresses[hw_address] = ip_address
+
+def setup_session(username, password):
+    session = requests.Session()
     credentials = username + ':' + password
     credentials = base64.b64encode(credentials.encode('utf-8'))
-    cookies = { 'Authorization': 'Basic ' + str(credentials, 'utf-8') }
+    session.cookies.set('Authorization', 'Basic ' + str(credentials, 'utf-8'))
+    return session
+
+def fetch_statistics(address, session, data):
     url = 'http://' + address + '/userRpm/SystemStatisticRpm.htm'
     params = { 
         'Num_per_page': 100,  # Max of 100 results at a time can be returned by the firmware
@@ -51,15 +75,20 @@ def fetch_data(address, username, password, data):
         'Goto_page': 1,  # Page 1 of n
         'interval': 60,  # Seems to influence how frequently the table is populated with new data
         }
-    request = requests.get(url=url, params=params, cookies=cookies)
-    num_pages = parse_request(request, data)
+    request = session.get(url=url, params=params)
+    num_pages = parse_statistics(request, data)
 
     # Automatically fetch any subsequent pages to obtain all remaining data
     if num_pages > 1:
         for page in range(2, num_pages+1):
             params['Goto_page'] = page
-            request = requests.get(url=url, params=params, cookies=cookies)
+            request = session.get(url=url, params=params)
             parse_request(request, data)
+
+def fetch_dhcp_list(address, session, hostnames, ip_addresses):
+    url = 'http://' + address + '/userRpm/AssignedIpAddrListRpm.htm'
+    request = session.get(url=url)
+    parse_dhcp_list(request, hostnames, ip_addresses)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -69,8 +98,24 @@ def main():
     parser.add_argument('-o', '--outfile', action='store', dest='outfile', help='Destination file path to write the latest router statistics snapshot to.', required=False)
     args = parser.parse_args()
 
-    data = {}
-    fetch_data(args.address, args.username, args.password, data)
+    session = setup_session(args.username, args.password)
+
+    # Fetch data
+    statistics = {}
+    fetch_statistics(args.address, session, statistics)
+
+    hostnames = {}
+    ip_addresses = {}
+    fetch_dhcp_list(args.address, session, hostnames, ip_addresses)
+
+    # Sort statistics in ascending order of bytes transferred
+    statistics = collections.OrderedDict(sorted(statistics.items(), key=lambda t: t[1], reverse=True))
+
+    data = []
+    for hw_address, bytes_transferred in statistics.items():
+        hostname = hostnames.get(hw_address, '')
+        ip_address = ip_addresses.get(hw_address, '')
+        data.append([hw_address, ip_address, hostname, bytes_transferred])
     
     if args.outfile:
         # Write to file silently
@@ -78,13 +123,14 @@ def main():
             json.dump(data, f, indent=4)
     else:
         # Print a thinned subset of info to stdout
-        sorted_data = collections.OrderedDict(sorted(data.items(), key=lambda t: t[1], reverse=True))
         bytes_total = 0
-        for hw_address, bytes_transferred in sorted_data.items():
+        for hw_address, bytes_transferred in statistics.items():
             bytes_total += bytes_transferred
             megabytes_transferred = int(bytes_transferred/1024/1024)
+            hostname = hostnames.get(hw_address, '')
+            ip_address = ip_addresses.get(hw_address, '')
             if (megabytes_transferred > 0):
-                print('{}: {:,.0f} MB'.format(hw_address, megabytes_transferred))
+                print('{} | {:15.15s} | {:17.17s} | {:,.0f} MB'.format(hw_address, ip_address, hostname, megabytes_transferred))
         print("Total: {:,.0f} MB".format(bytes_total/1024/1024))
 
 if __name__ == '__main__':
