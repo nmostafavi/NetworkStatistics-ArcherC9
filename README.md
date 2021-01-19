@@ -32,12 +32,12 @@ optional arguments:
 ## How to use
 Simply run the script providing your router's address, username, and password provided as arguments, e.g. `./stats.py -a 192.168.1.1 -u root -p password`.
 
-A quick summary of throughput statistics will be printed, in ascending order:
+A quick summary of throughput statistics will be printed, in ascending order of megabytes transferred:
 ```
-48-58-E8-BA-60-26: 1,710 MB
-49-2F-37-0B-9D-B6: 977 MB
-FE-B7-18-E6-5F-FE: 868 MB
-2E-91-09-E5-75-03: 802 MB
+48-58-E8-BA-60-26 | 192.168.1.104   | Living-Room-PC    | 3,623 MB
+49-2F-37-0B-9D-B6 | 192.168.1.109   | FreeNAS           | 1,711 MB
+FE-B7-18-E6-5F-FE | 192.168.1.108   | Ubuntu-Laptop     | 1,682 MB
+2E-91-09-E5-75-03 | 192.168.1.103   | Raspberry-Pi      | 802 MB
 ...
 Total: 8,917 MB
 ```
