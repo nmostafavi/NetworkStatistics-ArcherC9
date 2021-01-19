@@ -79,10 +79,13 @@ def main():
     else:
         # Print a thinned subset of info to stdout
         sorted_data = collections.OrderedDict(sorted(data.items(), key=lambda t: t[1], reverse=True))
+        bytes_total = 0
         for hw_address, bytes_transferred in sorted_data.items():
+            bytes_total += bytes_transferred
             megabytes_transferred = int(bytes_transferred/1024/1024)
             if (megabytes_transferred > 0):
                 print('{}: {:,.0f} MB'.format(hw_address, megabytes_transferred))
+        print("Total: {:,.0f} MB".format(bytes_total/1024/1024))
 
 if __name__ == '__main__':
     main()
