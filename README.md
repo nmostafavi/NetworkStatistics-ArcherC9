@@ -39,6 +39,7 @@ A quick summary of throughput statistics will be printed, in ascending order:
 FE-B7-18-E6-5F-FE: 868 MB
 2E-91-09-E5-75-03: 802 MB
 ...
+Total: 8,917 MB
 ```
 
 If an output file path is specified, the script will silently generate a JSON file containing a more comprehensive summary of bytes transferred. If no host address, username, or password is specified, the default values for the router will be used (i.e. `192.168.1.1`, `admin`/`admin`).
