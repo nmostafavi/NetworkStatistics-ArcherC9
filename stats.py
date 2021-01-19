@@ -6,7 +6,7 @@ import collections
 import json
 import requests
 
-def parse_statistics(request, data):
+def parse_statistics(request, statistics):
     # Quick and dirty string parser that processes the HTML response to obtain: 
     # 1. The raw statistics data on this page, and 
     # 2. The number of pages the total set of data is spread across.
@@ -32,7 +32,7 @@ def parse_statistics(request, data):
             fields = line.split(', ')
             hw_address = fields[2].replace('"', '')
             bytes_transferred = int(fields[4])
-            data[hw_address] = bytes_transferred
+            statistics[hw_address] = bytes_transferred
         elif parser_state == 'parsing PageListPara':
             # Only interested in the first integer value in PageListPara.
             num_pages = int(line.split(',')[0])
@@ -67,7 +67,7 @@ def setup_session(username, password):
     session.cookies.set('Authorization', 'Basic ' + str(credentials, 'utf-8'))
     return session
 
-def fetch_statistics(address, session, data):
+def fetch_statistics(address, session, statistics):
     url = 'http://' + address + '/userRpm/SystemStatisticRpm.htm'
     params = { 
         'Num_per_page': 100,  # Max of 100 results at a time can be returned by the firmware
@@ -76,14 +76,14 @@ def fetch_statistics(address, session, data):
         'interval': 60,  # Seems to influence how frequently the table is populated with new data
         }
     request = session.get(url=url, params=params)
-    num_pages = parse_statistics(request, data)
+    num_pages = parse_statistics(request, statistics)
 
     # Automatically fetch any subsequent pages to obtain all remaining data
     if num_pages > 1:
         for page in range(2, num_pages+1):
             params['Goto_page'] = page
             request = session.get(url=url, params=params)
-            parse_request(request, data)
+            parse_statistics(request, statistics)
 
 def fetch_dhcp_list(address, session, hostnames, ip_addresses):
     url = 'http://' + address + '/userRpm/AssignedIpAddrListRpm.htm'
