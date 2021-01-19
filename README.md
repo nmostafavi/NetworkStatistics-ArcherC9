@@ -1,5 +1,5 @@
-# BandwidthMonitor-ArcherC9
-Fetch bandwidth usage data from TP-LINK Archer C9 router
+# NetworkStatistics-ArcherC9
+Fetch network usage data from TP-LINK Archer C9 router via CLI
 
 ## About
 This script will fetch network traffic statistics from the web interface of the TP-LINK Archer C9 router and either save them to disk or display them for your perusal. 
