@@ -47,6 +47,6 @@ If an output file path is specified, the script will silently generate a JSON fi
 ## Limitations
 * Once any entry reaches a total of 4,096 MB transferred (4,294,967,295 bytes) its value will reset to zero.
   * The router's firmware appears to store the "total bytes" field as an unsigned 32-bit integer, resulting in an integer overflow bug. *This severely hinders the usefulness of the on-router statistics gathering feature.* If you wish to gather long-term usage statistics, you can work around this limitation by polling the statistics periodically.
-  * On a 1Gbps connction, it takes about 30 seconds to reach this limit. On a 250Mbps connection, it takes about 2 minutes. For my purposes, I should be able to run the script once every minute and not lose any data, as long as I watch for overflows.
+  * On a connection with combined upload+download bandwidth of 1Gbps, it takes about 30 seconds to reach this limit. On a 250Mbps connection, it takes about 2 minutes. For my internet connection (275+10Mbps) I should be able to run the script once every minute and not lose any data, as long as I account for integer overflows.
 * Collected data is cleared automatically upon router reboot, as it appears to be stored in the router's RAM.
 * These numbers might include all LAN traffic, and sadly may not be fully accurate for purposes of monitoring WAN throughput. I have not tested this.
