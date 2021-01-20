@@ -59,6 +59,6 @@ Total: 8,917 MB
 If an output file path is specified, the script will silently generate a JSON file containing more complete data, with throughput in units of bytes transferred. If no host address, username, or password is specified, the default values for the router will be used (i.e. `192.168.0.1`, `admin`/`admin`).
 
 ## Limitations
-* Once any entry reaches a total of 4,096 MB transferred (4,294,967,295 bytes) its value will reset to zero.
+* Once an entry in the router's network statistics page reaches a total of 4,096 MB transferred (4,294,967,295 bytes) its value will reset to zero.
   * The router's firmware appears to store the "total bytes" field as an unsigned 32-bit integer, resulting in an integer overflow bug. *This severely hinders the usefulness of the on-router statistics gathering feature.* If you wish to gather long-term usage statistics, you may be able to work around this limitation by polling the statistics frequently, as is done in the `poll.py` script.
 * Collected data is cleared automatically upon router reboot, as it appears to be stored in the router's RAM.
