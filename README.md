@@ -4,7 +4,7 @@ Fetch network usage data from TP-LINK Archer C9 router via CLI
 ## About
 This script will fetch network traffic statistics from the web interface of the TP-LINK Archer C9 router and either save them to disk or display them for your perusal. 
 
-I have written this script in order to compare my internally-gathered bandwidth usage statistics against measurements provided by my ISP. While this script is handy, be aware there are inherent flaws and [limitations](#limitations) when using this router's built-in statistics collection, some of which may preclude the usefulness of this script.
+I have written this script in order to compare my internally-gathered bandwidth usage statistics against measurements provided by my ISP. While this script is handy, be aware there are inherent [flaws and limitations](#limitations) when using this router's built-in statistics collection, some of which may preclude the usefulness of this script.
 
 ## Requirements
 Statistics collection must be enabled on the router, under `Advanced` > `System Tools` > `Statistics`. As a requirement of statistics collection, the router must have the "NAT Boost" setting turned off, under `Advanced` > `NAT Boost`.
@@ -46,7 +46,6 @@ If an output file path is specified, the script will silently generate a JSON fi
 
 ## Limitations
 * Once any entry reaches a total of 4,096 MB transferred (4,294,967,295 bytes) its value will reset to zero.
-  * The router's firmware appears to store the "total bytes" field as an unsigned 32-bit integer, resulting in an integer overflow bug. *This severely hinders the usefulness of the on-router statistics gathering feature.* If you wish to gather long-term usage statistics, you can work around this limitation by polling the statistics periodically.
-  * On a connection with combined upload+download bandwidth of 1Gbps, it takes about 30 seconds to reach this limit. On a 250Mbps connection, it takes about 2 minutes. For my internet connection (275+10Mbps) I should be able to run the script once every minute and not lose any data, as long as I account for integer overflows.
+  * The router's firmware appears to store the "total bytes" field as an unsigned 32-bit integer, resulting in an integer overflow bug. *This severely hinders the usefulness of the on-router statistics gathering feature.* If you wish to gather long-term usage statistics, you may be able to work around this limitation by polling the statistics frequently.
 * Collected data is cleared automatically upon router reboot, as it appears to be stored in the router's RAM.
 * These numbers might include all LAN traffic, and sadly may not be fully accurate for purposes of monitoring WAN throughput. I have not tested this.
