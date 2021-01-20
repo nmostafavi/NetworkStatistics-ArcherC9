@@ -90,14 +90,7 @@ def fetch_dhcp_list(address, session, hostnames, ip_addresses):
     request = session.get(url=url)
     parse_dhcp_list(request, hostnames, ip_addresses)
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-a', '--address', action='store', dest='address', help='Host address (IP or hostname) of the router. (default: \'192.168.0.1\')', default='192.168.0.1', required=False)
-    parser.add_argument('-u', '--username', action='store', dest='username', help='Username used to log into the router. (default: \'admin\')', default='admin', required=False)
-    parser.add_argument('-p', '--password', action='store', dest='password', help='Password used to log into the router. (default: \'admin\')', default='admin', required=False)
-    parser.add_argument('-o', '--outfile', action='store', dest='outfile', help='Destination file path to write the latest router statistics snapshot to.', required=False)
-    args = parser.parse_args()
-
+def main(args):
     session = setup_session(args.username, args.password)
 
     # Fetch data
@@ -134,4 +127,10 @@ def main():
         print("Total: {:,.0f} MB".format(bytes_total/1024/1024))
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-a', '--address', action='store', dest='address', help='Host address (IP or hostname) of the router. (default: \'192.168.0.1\')', default='192.168.0.1', required=False)
+    parser.add_argument('-u', '--username', action='store', dest='username', help='Username used to log into the router. (default: \'admin\')', default='admin', required=False)
+    parser.add_argument('-p', '--password', action='store', dest='password', help='Password used to log into the router. (default: \'admin\')', default='admin', required=False)
+    parser.add_argument('-o', '--outfile', action='store', dest='outfile', help='Destination file path to write the latest router statistics snapshot to.', required=False)
+    args = parser.parse_args()
+    main(args)
