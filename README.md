@@ -2,9 +2,11 @@
 Fetch network usage data from TP-LINK Archer C9 router via CLI
 
 ## About
-This script will fetch network traffic statistics from the web interface of the TP-LINK Archer C9 router and either save them to disk or display them for your perusal. 
+`stats.py` will fetch network traffic statistics from the web interface of the TP-LINK Archer C9 router. Resulting data can be saved to disk or summarized and displayed for your perusal.
 
-I have written this script in order to compare my internally-gathered bandwidth usage statistics against measurements provided by my ISP. While this script is handy, be aware there are inherent [flaws and limitations](#limitations) when using this router's built-in statistics collection, some of which may preclude the usefulness of this script.
+`poll.py` will frequently poll the router for traffic statistics, and produces a running tally of bandwidth consumed.
+
+I have written these scripts in order to compare my internally-gathered bandwidth usage statistics against measurements provided by my ISP. While the `stats.py` script is handy, be aware there are inherent [flaws and limitations](#limitations) when using this router's built-in statistics collection, some of which may preclude its usefulness. 
 
 ## Requirements
 Statistics collection must be enabled on the router, under `Advanced` > `System Tools` > `Statistics`. As a requirement of statistics collection, the router must have the "NAT Boost" setting turned off, under `Advanced` > `NAT Boost`.
@@ -28,6 +30,18 @@ optional arguments:
                         Destination file path to write the latest router statistics snapshot
                         to.
 ```
+```
+usage: poll.py [-h] [-a ADDRESS] [-u USERNAME] [-p PASSWORD]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -a ADDRESS, --address ADDRESS
+                        Host address (IP or hostname) of the router. (default: '192.168.0.1')
+  -u USERNAME, --username USERNAME
+                        Username used to log into the router. (default: 'admin')
+  -p PASSWORD, --password PASSWORD
+                        Password used to log into the router. (default: 'admin')
+```
 
 ## How to use
 Simply run the script providing your router's address, username, and password provided as arguments, e.g. `./stats.py -a 192.168.1.1 -u root -p password`.
@@ -45,7 +59,6 @@ Total: 8,917 MB
 If an output file path is specified, the script will silently generate a JSON file containing more complete data, with throughput in units of bytes transferred. If no host address, username, or password is specified, the default values for the router will be used (i.e. `192.168.0.1`, `admin`/`admin`).
 
 ## Limitations
-* Once any entry reaches a total of 4,096 MB transferred (4,294,967,295 bytes) its value will reset to zero.
-  * The router's firmware appears to store the "total bytes" field as an unsigned 32-bit integer, resulting in an integer overflow bug. *This severely hinders the usefulness of the on-router statistics gathering feature.* If you wish to gather long-term usage statistics, you may be able to work around this limitation by polling the statistics frequently.
+* Once an entry in the router's network statistics page reaches a total of 4,096 MB transferred (4,294,967,295 bytes) its value will reset to zero.
+  * The router's firmware appears to store the "total bytes" field as an unsigned 32-bit integer, resulting in an integer overflow bug. *This severely hinders the usefulness of the on-router statistics gathering feature.* If you wish to gather long-term usage statistics, you may be able to work around this limitation by polling the statistics frequently, as is done in the `poll.py` script.
 * Collected data is cleared automatically upon router reboot, as it appears to be stored in the router's RAM.
-* These numbers might include all LAN traffic, and sadly may not be fully accurate for purposes of monitoring WAN throughput. I have not tested this.
