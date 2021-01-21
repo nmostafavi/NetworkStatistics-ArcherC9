@@ -2,7 +2,6 @@
 
 import argparse
 import base64
-import collections
 import json
 import requests
 
@@ -69,6 +68,16 @@ def setup_session(username, password):
     session.cookies.set('Authorization', 'Basic ' + str(credentials, 'utf-8'))
     return session
 
+def make_request(session, url, params={}):
+    try:
+        return session.get(url=url, params=params, timeout=TIMEOUT)
+    except requests.exceptions.ConnectionError:
+        print("Connection error.")
+    except requests.exceptions.Timeout:
+        print("Timed out.")
+    except BaseException as e:
+        print(e)
+
 def fetch_statistics(address, session, statistics):
     url = 'http://' + address + '/userRpm/SystemStatisticRpm.htm'
     params = { 
@@ -77,19 +86,25 @@ def fetch_statistics(address, session, statistics):
         'Goto_page': 1,  # Page 1 of n
         'interval': 60,  # Seems to influence how frequently the table is populated with new data
         }
-    request = session.get(url=url, params=params, timeout=TIMEOUT)
+    request = make_request(session, url, params)
+    if not request:
+        return
     num_pages = parse_statistics(request, statistics)
 
     # Automatically fetch any subsequent pages to obtain all remaining data
     if num_pages > 1:
         for page in range(2, num_pages+1):
             params['Goto_page'] = page
-            request = session.get(url=url, params=params, timeout=TIMEOUT)
+            request = make_request(session, url, params)
+            if not request:
+                return
             parse_statistics(request, statistics)
 
 def fetch_dhcp_list(address, session, hostnames, ip_addresses):
     url = 'http://' + address + '/userRpm/AssignedIpAddrListRpm.htm'
-    request = session.get(url=url, timeout=TIMEOUT)
+    request = make_request(session, url)
+    if not request:
+        return
     parse_dhcp_list(request, hostnames, ip_addresses)
 
 def main(args):
@@ -104,7 +119,7 @@ def main(args):
     fetch_dhcp_list(args.address, session, hostnames, ip_addresses)
 
     # Sort statistics in ascending order of bytes transferred
-    statistics = collections.OrderedDict(sorted(statistics.items(), key=lambda t: t[1], reverse=True))
+    statistics = dict(sorted(statistics.items(), key=lambda t: t[1], reverse=True))
 
     data = []
     for hw_address, bytes_transferred in statistics.items():
