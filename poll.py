@@ -7,47 +7,100 @@ import time
 UINT32_MAX = 4294967295  # max number of bytes that the router statistics page can display before it overflows
 POLL_INTERVAL = 5  # seconds
 
+# State variables
+total_bytes_transferred = 0
+last_num_hw_addresses = 0
+outfile = None
+outfile_last_opened = None
+
+def write_header(base_filename, delta_statistics):
+    global last_num_hw_addresses
+    filename = base_filename + ' header.csv'
+    # Write CSV header: ,hwaddr1,hwaddr2,hwaddr3,...,\n
+    with open(filename, 'w') as f:
+        f.write(',')
+        for hw_addr in delta_statistics:
+            f.write(hw_addr)
+            f.write(',')
+        f.write('\n')
+    last_num_hw_addresses = len(delta_statistics)
+
+""" Automatically opens a new outfile at the start of each day.
+"""
+def open_outfile(base_filename):
+    global outfile
+    global outfile_last_opened
+    today = time.strftime('%d')
+
+    if outfile and outfile_last_opened != today:
+        # Close yesterday's outfile
+        outfile.close()
+        outfile = None
+
+    if not outfile:
+        # Open today's outfile
+        filename = base_filename + '.csv'
+        outfile = open(filename, 'w', buffering=1)
+        print('Writing new log file: ' + filename)
+        outfile_last_opened = today
+        return True  # New outfile opened
+
+    return False
+
+""" Writes out data to disk in CSV format. The CSV's header is kept in a separate file for ease of writing.
+    Each row contains a comma separated list of bytes sent since the last row was written. The CSV header
+    maintains an ordered list of each hardware address, corresponding to the columns of the data CSV file.
+    To open in spreadsheet software (e.g. Excel) simply prepend the header file's contents to the beginning
+    of the data CSV file.
+"""
 def write_data(delta_statistics):
-    # Periodically open a new file if necessary to split the data, e.g. one file per day.
     # Write out deltas of bandwidth consumed per mac address as a new row in the csv.
     # Keep the header of the csv as a separate file to make it easier to append should new values need to be added.
-    filename_template = time.strftime('%Y-%m-%d {}.csv')
-    header_filename = filename_template.format('header')
-    body_filename = filename_template.format('data')
-    timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+    global outfile
+    timestamp = time.strftime('%Y-%m-%d %H%M%S')
 
-    # TODO: see if we have a set of files already open for today. If so, reuse their file handles.
-    # If the day has rolled over, close the old file and open a new one.
+    # Open new outfile if needed
+    if open_outfile(timestamp) or len(delta_statistics) > last_num_hw_addresses:
+        # Rewrite the header if needed
+        write_header(timestamp, delta_statistics)
 
-    # if len(delta_statistics) > num_hw_addresses:
-        # A new hardware address has been added since the last log entry; append it to the CSV header.
-        # TODO: rewrite CSV header: ,hwaddr1,hwaddr2,hwaddr3,...\n
-
-    # TODO: write CSV data entry: timestamp,deltabytes1,deltabytes2,deltabytes3,...\n
+    # Write CSV data entry: timestamp,deltabytes1,deltabytes2,deltabytes3,...,\n
+    outfile.write(timestamp)
+    outfile.write(',')
+    for _, delta_bytes_transferred in delta_statistics.items():
+        outfile.write(str(delta_bytes_transferred))
+        outfile.write(',')
+    outfile.write('\n')
 
 def main(args):
+    global total_bytes_transferred
     session = stats.setup_session(args.username, args.password)
 
-    cumulative_statistics = {}
-    previous_statistics = {}
-
     # Get baseline reading
+    previous_statistics = {}
     stats.fetch_statistics(args.address, session, previous_statistics)
 
     while True:
-        # Fetch current statistics from router
+        # Pre-populate each dictionary with starting data. This allows each dict to maintain a consistent key
+        # order, which ultimately allows the final written CSV to maintain its column order.
+        delta_statistics = {}
         current_statistics = {}
+        for hw_address, previous_bytes_transferred in previous_statistics.items():
+            delta_statistics[hw_address] = 0
+            current_statistics[hw_address] = previous_bytes_transferred
+
+        # Fetch current statistics from router
         stats.fetch_statistics(args.address, session, current_statistics)
         if not current_statistics:
             print("Failed to fetch statistics.")
             time.sleep(POLL_INTERVAL)
             continue
 
-        # Copy over all previously encountered hardware addresses to the delta_statistics dict.
-        # This allows the final written csv file's columns to remain in stable order.
-        delta_statistics = {}
-        for hw_address in cumulative_statistics:
-            delta_statistics[hw_address] = 0
+        # Here is where you might want to note any hardware addresses that have dropped out from the router's data
+        # since the last time the data was collected. Knowing which MAC addresses are no longer being tracked by the
+        # router could be useful for cleaning up data logs when a new CSV file is created at the start of each day.
+        # It would also solve issues should a device suddenly stop being tracked, then start being tracked again at
+        # a later time, which would cause a momentary blip (such as inaccuracy due to overcounting) in the data.
 
         # Process the statistics data
         for hw_address, current_bytes_transferred in current_statistics.items():
@@ -60,14 +113,11 @@ def main(args):
             else:
                 delta_bytes_transferred = current_bytes_transferred - previous_bytes_transferred
             delta_statistics[hw_address] = delta_bytes_transferred
-            cumulative_statistics[hw_address] = delta_bytes_transferred + cumulative_statistics.get(hw_address, 0)
+            total_bytes_transferred += delta_bytes_transferred
         previous_statistics = current_statistics
 
         # Print total bytes transferred
-        total = 0
-        for hw_address, bytes_transferred in cumulative_statistics.items():
-            total += bytes_transferred
-        print('Total: {:,.0f} MB'.format(total/1024/1024))
+        print('Total: {:,.0f} MB'.format(total_bytes_transferred/1024/1024))
 
         # Log data to disk
         write_data(delta_statistics)
