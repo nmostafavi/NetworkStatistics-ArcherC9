@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import stats
 import time
 
@@ -12,12 +13,16 @@ total_bytes_transferred = 0
 last_num_hw_addresses = 0
 outfile = None
 outfile_last_opened = None
+outfile_base_filename = ''
 
-def write_header(base_filename, delta_statistics):
-    global last_num_hw_addresses
-    filename = base_filename + ' header.csv'
+def write_header(delta_statistics):
     # Write CSV header: ,hwaddr1,hwaddr2,hwaddr3,...,\n
-    with open(filename, 'w') as f:
+    global last_num_hw_addresses
+    filepath = 'logs/' + outfile_base_filename + ' header.csv'
+    print('Writing header file: ' + filepath)
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    with open(filepath, 'w') as f:
         f.write(',')
         for hw_addr in delta_statistics:
             f.write(hw_addr)
@@ -30,6 +35,7 @@ def write_header(base_filename, delta_statistics):
 def open_outfile(base_filename):
     global outfile
     global outfile_last_opened
+    global outfile_base_filename
     today = time.strftime('%d')
 
     if outfile and outfile_last_opened != today:
@@ -39,10 +45,13 @@ def open_outfile(base_filename):
 
     if not outfile:
         # Open today's outfile
-        filename = base_filename + '.csv'
-        outfile = open(filename, 'w', buffering=1)
-        print('Writing new log file: ' + filename)
+        filepath = 'logs/' + base_filename + '.csv'
+        print('Writing new log file: ' + filepath)
+        if not os.path.exists('logs'):
+            os.makedirs('logs')
+        outfile = open(filepath, 'w', buffering=1)
         outfile_last_opened = today
+        outfile_base_filename = base_filename
         return True  # New outfile opened
 
     return False
@@ -62,7 +71,7 @@ def write_data(delta_statistics):
     # Open new outfile if needed
     if open_outfile(timestamp) or len(delta_statistics) > last_num_hw_addresses:
         # Rewrite the header if needed
-        write_header(timestamp, delta_statistics)
+        write_header(delta_statistics)
 
     # Write CSV data entry: timestamp,deltabytes1,deltabytes2,deltabytes3,...,\n
     outfile.write(timestamp)
@@ -106,7 +115,7 @@ def main(args):
         for hw_address, current_bytes_transferred in current_statistics.items():
             previous_bytes_transferred = previous_statistics.get(hw_address, 0)
             delta_bytes_transferred = 0
-            if current_bytes_transferred < previous_bytes_transferred:
+            if hw_address in previous_statistics and current_bytes_transferred < previous_bytes_transferred:
                 # Value has wrapped around to zero since the last time we checked due to an integer overflow bug
                 # in the router's firmware. Router rolls over to 0 once it counts UINT32_MAX bytes.
                 delta_bytes_transferred = UINT32_MAX - previous_bytes_transferred + current_bytes_transferred

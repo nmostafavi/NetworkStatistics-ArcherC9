@@ -141,7 +141,7 @@ def main(args):
             ip_address = ip_addresses.get(hw_address, '')
             if (megabytes_transferred > 0):
                 print('{} | {:15.15s} | {:17.17s} | {:,.0f} MB'.format(hw_address, ip_address, hostname, megabytes_transferred))
-        print("Total: {:,.0f} MB".format(bytes_total/1024/1024))
+        print('Total: {:,.0f} MB'.format(bytes_total/1024/1024))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
