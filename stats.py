@@ -71,12 +71,14 @@ def setup_session(username, password):
 def make_request(session, url, params={}):
     try:
         return session.get(url=url, params=params, timeout=TIMEOUT)
-    except requests.exceptions.ConnectionError:
-        print("Connection error.")
+    except requests.exceptions.ConnectionError as e:
+        print('Connection error.')
+        print(e)
     except requests.exceptions.Timeout:
-        print("Timed out.")
+        print('Timed out.')
     except BaseException as e:
         print(e)
+    return None
 
 def fetch_statistics(address, session, statistics):
     url = 'http://' + address + '/userRpm/SystemStatisticRpm.htm'
@@ -88,7 +90,7 @@ def fetch_statistics(address, session, statistics):
         }
     request = make_request(session, url, params)
     if not request:
-        return
+        return False
     num_pages = parse_statistics(request, statistics)
 
     # Automatically fetch any subsequent pages to obtain all remaining data
@@ -97,15 +99,18 @@ def fetch_statistics(address, session, statistics):
             params['Goto_page'] = page
             request = make_request(session, url, params)
             if not request:
-                return
+                return False
             parse_statistics(request, statistics)
+
+    return True  # Success
 
 def fetch_dhcp_list(address, session, hostnames, ip_addresses):
     url = 'http://' + address + '/userRpm/AssignedIpAddrListRpm.htm'
     request = make_request(session, url)
     if not request:
-        return
+        return False
     parse_dhcp_list(request, hostnames, ip_addresses)
+    return True  # Success
 
 def main(args):
     session = setup_session(args.username, args.password)

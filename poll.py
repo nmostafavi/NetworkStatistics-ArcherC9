@@ -87,7 +87,9 @@ def main(args):
 
     # Get baseline reading
     previous_statistics = {}
-    stats.fetch_statistics(args.address, session, previous_statistics)
+    while not stats.fetch_statistics(args.address, session, previous_statistics):
+        print("Failed to fetch statistics.")
+        time.sleep(POLL_INTERVAL)
 
     while True:
         # Pre-populate each dictionary with starting data. This allows each dict to maintain a consistent key
@@ -95,12 +97,11 @@ def main(args):
         delta_statistics = {}
         current_statistics = {}
         for hw_address, previous_bytes_transferred in previous_statistics.items():
-            delta_statistics[hw_address] = 0
+            delta_statistics[hw_address] = ''
             current_statistics[hw_address] = previous_bytes_transferred
 
         # Fetch current statistics from router
-        stats.fetch_statistics(args.address, session, current_statistics)
-        if not current_statistics:
+        if not stats.fetch_statistics(args.address, session, current_statistics):
             print("Failed to fetch statistics.")
             time.sleep(POLL_INTERVAL)
             continue
@@ -126,7 +127,7 @@ def main(args):
         previous_statistics = current_statistics
 
         # Print total bytes transferred
-        print('Total: {:,.0f} MB'.format(total_bytes_transferred/1024/1024))
+        print('{} Total: {:,.0f} MB'.format(time.strftime('(%Y-%m-%d %H:%M:%S)'), total_bytes_transferred/1024/1024))
 
         # Log data to disk
         write_data(delta_statistics)
