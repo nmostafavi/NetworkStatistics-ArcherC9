@@ -69,8 +69,11 @@ def write_data(delta_statistics):
     timestamp = time.strftime('%Y-%m-%d %H%M%S')
 
     # Open new outfile if needed
-    if open_outfile(timestamp) or len(delta_statistics) > last_num_hw_addresses:
-        # Rewrite the header if needed
+    if open_outfile(timestamp):
+        # TODO: clean hardware addresses that are stale
+        write_header(delta_statistics)
+    # Rewrite header if needed
+    elif len(delta_statistics) > last_num_hw_addresses:
         write_header(delta_statistics)
 
     # Write CSV data entry: timestamp,deltabytes1,deltabytes2,deltabytes3,...,\n
@@ -92,12 +95,11 @@ def main(args):
         time.sleep(POLL_INTERVAL)
 
     while True:
-        # Pre-populate each dictionary with starting data. This allows each dict to maintain a consistent key
+        # Pre-populate dictionary with starting data. This allows it to maintain a consistent key
         # order, which ultimately allows the final written CSV to maintain its column order.
         delta_statistics = {}
         current_statistics = {}
         for hw_address, previous_bytes_transferred in previous_statistics.items():
-            delta_statistics[hw_address] = ''
             current_statistics[hw_address] = previous_bytes_transferred
 
         # Fetch current statistics from router
@@ -139,5 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--address', action='store', dest='address', help='Host address (IP or hostname) of the router. (default: \'192.168.0.1\')', default='192.168.0.1', required=False)
     parser.add_argument('-u', '--username', action='store', dest='username', help='Username used to log into the router. (default: \'admin\')', default='admin', required=False)
     parser.add_argument('-p', '--password', action='store', dest='password', help='Password used to log into the router. (default: \'admin\')', default='admin', required=False)
+    # TODO: Figure out how to daemonize this, and add a flag for making sure this runs as a daemon process.
+    # e.g. --start-background and --stop-background flags.
     args = parser.parse_args()
     main(args)

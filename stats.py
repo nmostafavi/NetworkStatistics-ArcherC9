@@ -76,7 +76,7 @@ def make_request(session, url, params={}):
         print(e)
     except requests.exceptions.Timeout:
         print('Timed out.')
-    except BaseException as e:
+    except requests.exception.RequestException as e:
         print(e)
     return None
 
